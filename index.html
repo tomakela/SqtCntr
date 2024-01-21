@@ -1,0 +1,208 @@
+<html>
+<head>
+<script>
+    window.addEventListener('load', function () {
+        init()
+  })
+</script>
+<style>
+
+body {  background-color: #F0EADF; } 
+
+#title-container {
+    font-family: "Courier New";
+    font-size: 24;
+    font-weight: bold;
+    text-align: center;
+    padding: 20px;
+    margin: auto;
+}
+#canvas-container {
+    margin: auto;
+    text-align: center;
+}
+
+#canvas {
+    height: 80%;
+    aspect-ratio: 1;
+    border-radius: 25px;
+    margin: 0%;
+}
+#label-container {
+    font-family: "Courier New";
+    font-size: 18;
+    padding: 20px;
+    margin: auto;
+    width:300px;
+}
+
+.progress-bar-background {
+  position: relative;
+  width: 100%;
+  height: 50px;
+  line-height: 50px;
+  border-radius: 10px;
+  background: rgba(126, 121, 83, 0.2);
+}
+
+.progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  padding-left: 20px;
+  height: 50px;
+  line-height: 50px;
+  vertical-align: middle; 
+  border-radius: 10px;
+  transition: all 0.1s;
+  text-align: left;
+  white-space: nowrap;
+  width: 0%;
+}
+
+br { display:block; margin-top:5px; line-height:5px; }
+
+#progress-bar1 {
+  background: #32a4ebb6;
+  box-shadow: 2px 5px 5px -7px rgba(30, 166, 250, 0.36);
+}
+
+#progress-bar2 {
+  background: #f2b91dc4;
+  box-shadow: 2px 5px 5px -7px rgba(168, 179, 22, 0.36);
+}
+
+</style>
+</head>
+<div id="title-container">SqtCntr 1.0</div>
+<!-- <button type="button" onclick="init()">Start</button>-->
+<div id="canvas-container"><canvas id="canvas"></canvas></div>
+<div id="label-container">
+    <div class="progress-bar-background"><div class="progress-bar" id="progress-bar1">-%</div></div>    
+    <br>
+    <div class="progress-bar-background"><div class="progress-bar" id="progress-bar2">-%</div></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+<script type="text/javascript">
+    // More API functions here:
+    // https://github.com/googlecreativelab/teachablemachine-community/tree/master/libraries/pose
+
+    // the link to your model provided by Teachable Machine export panel
+    const urlParams = new URLSearchParams(window.location.search);
+    var path = urlParams.get('model')
+    if(!path) path = "adult_model"
+    const URL = "./"+path+"/";
+
+    var cntr_intervals = 10
+    var intervals = urlParams.get('intervals')
+    if(intervals) cntr_intervals = parseInt(intervals)
+
+    let model, webcam, ctx, labelContainer, maxPredictions;
+
+    var synth = window.speechSynthesis;
+    var state = null
+    var already_encouraged = true
+    var cntr = 0
+    async function init() {
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        // load the model and metadata
+        // Refer to tmImage.loadFromFiles() in the API to support files from a file picker
+        // Note: the pose library adds a tmPose object to your window (window.tmPose)
+        model = await tmPose.load(modelURL, metadataURL);
+        maxPredictions = model.getTotalClasses();
+
+        // Convenience function to setup a webcam
+        const size = 200;
+        const flip = true; // whether to flip the webcam
+        webcam = new tmPose.Webcam(size, size, flip); // width, height, flip
+        await webcam.setup(); // request access to the webcam
+        await webcam.play();
+        window.requestAnimationFrame(loop);
+
+        // append/get elements to the DOM
+        const canvas = document.getElementById("canvas");
+        canvas.width = size; canvas.height = size;
+        //canvas.width = 4*size; canvas.height = 4*size;
+        ctx = canvas.getContext("2d");
+        //ctx.scale(4,4)
+        labelContainer = document.getElementById("label-container");
+        //for (let i = 0; i < maxPredictions; i++) { // and class labels
+        //    labelContainer.appendChild(document.createElement("div"));
+        //}
+    }
+
+    async function loop(timestamp) {
+        webcam.update(); // update the webcam frame
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+        // Prediction #1: run input through posenet
+        // estimatePose can take in an image, video or canvas html element
+        const { pose, posenetOutput } = await model.estimatePose(webcam.canvas);
+        // Prediction 2: run input through teachable machine classification model
+        const prediction = await model.predict(posenetOutput);
+
+        //for (let i = 0; i < maxPredictions; i++) {
+        //    const classPrediction =
+        //        prediction[i].className + ": " + prediction[i].probability.toFixed(2);
+        //    labelContainer.childNodes[i].innerHTML = classPrediction;
+        //}
+        bar = document.getElementById("progress-bar1")
+        bar.innerHTML  = ""+(100*prediction[0].probability).toFixed(0)+"%";
+        bar.style.setProperty("width","calc("+prediction[0].probability*100+"% - 20px)");
+
+        bar = document.getElementById("progress-bar2")
+        bar.innerHTML  = ""+(100*prediction[1].probability).toFixed(0)+"%";
+        bar.style.setProperty("width","calc("+prediction[1].probability*100+"% - 20px)");
+        
+        var text = null
+        var encouragement = null
+        if(prediction[0].probability > 0.9 && (state=='down' || state == null)) {
+            state = 'up'
+        }
+        else if(prediction[1].probability > 0.9 && (state=='up')) {
+            cntr++;
+            already_encouraged = false;
+            //text = String(cntr)';
+            text = '<say-as interpret-as="cardinal">"'+cntr+"</say-as>"
+            if(cntr % cntr_intervals == 0)
+                encouragement = 'Hyvin menee!';
+            state = 'down'
+        }
+
+        if(encouragement != null) {
+            utterance = new SpeechSynthesisUtterance(text+" "+encouragement);
+            utterance.lang = 'fi-FI';
+            utterance.rate = 3;
+            synth.speak(utterance);
+        }
+        else if(text != null) {
+            utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'fi-FI';
+            utterance.rate = 3;
+            synth.speak(utterance);
+        }
+
+        // finally draw the poses
+        drawPose(pose);
+    }
+
+    function drawPose(pose) {
+        if (webcam.canvas) {
+            ctx.drawImage(webcam.canvas, 0, 0);
+            // draw the keypoints and skeleton
+            if (pose) {
+                const minPartConfidence = 0.5;
+                tmPose.drawKeypoints(pose.keypoints, minPartConfidence, ctx, 2, 'red', 'black');
+                tmPose.drawSkeleton(pose.keypoints, minPartConfidence, ctx, 1, 'red');
+            }
+        }
+    }
+</script>
+</html>
