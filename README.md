@@ -1,3 +1,3 @@
 # crchr
 
-https://tomakela.github.io/crchr/
+https://tomakela.github.io/SqtCntr/
