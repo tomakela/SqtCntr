@@ -74,7 +74,22 @@ br { display:block; margin-top:5px; line-height:5px; }
 }
 
 </style>
+<link rel="manifest" href="/SqtCntr/manifest.json">
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
 </head>
+<body>
+    <script>
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/SqtCntr/service-worker.js').then(function(registration) {
+              console.log('ServiceWorker registration successful with scope: ', registration.scope);
+            }, function(err) {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+          });
+        }
+      </script>
+      
 <div id="title-container">SqtCntr 1.0</div>
 <!-- <button type="button" onclick="init()">Start</button>-->
 <div id="canvas-container"><canvas id="canvas"></canvas></div>
@@ -213,4 +228,5 @@ br { display:block; margin-top:5px; line-height:5px; }
         }
     }
 </script>
+</body>
 </html>
