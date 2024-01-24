@@ -169,8 +169,8 @@ br { display:block; margin-top:5px; line-height:5px; }
         else if(prediction[1].probability > 0.9 && (state=='up')) {
             cntr++;
             already_encouraged = false;
-            text = String(cntr);
-            //text = '<say-as interpret-as="cardinal">"'+cntr+"</say-as>"
+            //text = String(cntr);
+            text = '<say-as interpret-as="cardinal">'+cntr+'</say-as>'
             if(cntr % cntr_intervals == 0)
                 encouragement = 'Hyvin menee!';
             state = 'down'
