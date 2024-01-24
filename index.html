@@ -105,6 +105,8 @@ br { display:block; margin-top:5px; line-height:5px; }
     var state = null
     var already_encouraged = true
     var cntr = 0
+    var userAgent = navigator.userAgent.toLowerCase();
+
     async function init() {
         const modelURL = URL + "model.json";
         const metadataURL = URL + "metadata.json";
@@ -170,7 +172,13 @@ br { display:block; margin-top:5px; line-height:5px; }
             cntr++;
             already_encouraged = false;
             //text = String(cntr);
-            text = '<say-as interpret-as="ordinal">'+cntr+'</say-as>'
+            var isAndroid = userAgent.indexOf("android") > -1;
+            var isChrome = userAgent.indexOf("chrome") > -1;
+            if(isAndroid)
+                text = String(cntr);
+            else
+                text = '<say-as interpret-as="ordinal">'+cntr+'</say-as>';
+
             if(cntr % cntr_intervals == 0)
                 encouragement = 'Hyvin menee!';
             state = 'down'
